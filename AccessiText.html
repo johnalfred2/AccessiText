@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AccessiText</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --surface: #faf7f2;
+    --border: #d4cfc4;
+    --ink: #1a1714;
+    --muted: #8a857a;
+    --accent-dyslexia: #e8602c;
+    --accent-contrast: #1a1714;
+    --shadow: 0 2px 12px rgba(26,23,20,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(180,170,155,0.2) 39px, rgba(180,170,155,0.2) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(180,170,155,0.12) 39px, rgba(180,170,155,0.12) 40px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 740px;
+  }
+
+  header {
+    margin-bottom: 48px;
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.8rem;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--ink);
+  }
+
+  .logo span {
+    color: var(--accent-dyslexia);
+    font-style: italic;
+  }
+
+  .tagline {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+
+  .panel-label {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-label .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    display: inline-block;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: vertical;
+    padding: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--ink);
+    caret-color: var(--accent-dyslexia);
+  }
+
+  textarea::placeholder { color: var(--border); }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .btn {
+    padding: 18px 24px;
+    border: 1px solid;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .btn:hover::after { opacity: 1; }
+  .btn:active { transform: translateY(1px); }
+
+  .btn-dyslexia {
+    background: #fff8f5;
+    border-color: var(--accent-dyslexia);
+    color: var(--accent-dyslexia);
+  }
+  .btn-dyslexia::after { background: rgba(232,96,44,0.06); }
+
+  .btn-contrast {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #f5f0e8;
+  }
+  .btn-contrast::after { background: rgba(255,255,255,0.08); }
+
+  .btn-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    font-family: 'DM Serif Display', serif;
+  }
+
+  .btn-dyslexia .btn-title { color: var(--accent-dyslexia); }
+  .btn-contrast .btn-title { color: #f5f0e8; }
+
+  /* Output area */
+  #output-area {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+
+  #output-area.dyslexia-mode {
+    font-family: 'OpenDyslexic', 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+    font-size: 1.05rem;
+    line-height: 2;
+    letter-spacing: 0.06em;
+    word-spacing: 0.2em;
+  }
+
+  #output-area.high-contrast-mode {
+    background: #000;
+    color: #ffff00;
+    font-size: 1rem;
+    line-height: 1.9;
+    letter-spacing: 0.04em;
+    padding: 20px;
+  }
+
+  .output-panel {
+    position: relative;
+  }
+
+  .mode-badge {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .mode-badge.visible { opacity: 1; }
+  .mode-badge.dyslexia { background: #fff0ea; color: var(--accent-dyslexia); border: 1px solid rgba(232,96,44,0.3); }
+  .mode-badge.contrast { background: var(--ink); color: #ffff00; }
+
+  .copy-btn {
+    position: absolute;
+    bottom: 14px;
+    right: 16px;
+    background: var(--border);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    opacity: 0;
+  }
+
+  .output-panel:hover .copy-btn { opacity: 1; }
+  .copy-btn:hover { background: var(--ink); color: var(--bg); }
+
+  .empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--border);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    font-style: italic;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    color: var(--border);
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Animations */
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-in {
+    animation: fadeSlide 0.3s ease forwards;
+  }
+
+  /* High contrast overrides for output panel */
+  .high-contrast-output-panel {
+    background: #000 !important;
+    border-color: #ffff00 !important;
+  }
+
+  /* Font size slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .slider-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .slider-label span {
+    font-family: 'DM Serif Display', serif;
+    font-size: 0.9rem;
+    color: var(--ink);
+    letter-spacing: 0;
+    text-transform: none;
+    margin-left: 4px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--ink);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--ink);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--ink);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--ink);
+    cursor: pointer;
+  }
+
+  .size-markers {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+  }
+
+  .size-markers .sz-small { font-size: 0.6rem; }
+  .size-markers .sz-large { font-size: 0.9rem; }
+
+  /* Read Aloud */
+  .read-aloud-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    flex-wrap: wrap;
+  }
+
+  .btn-read {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    background: #f0f7ff;
+    border: 1px solid #5b9bd5;
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #2a6099;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-read:hover { background: #ddeeff; }
+  .btn-read:active { transform: translateY(1px); }
+
+  .btn-read.speaking {
+    background: #fff5f0;
+    border-color: var(--accent-dyslexia);
+    color: var(--accent-dyslexia);
+  }
+
+  .btn-stop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-stop:hover { border-color: var(--ink); color: var(--ink); }
+
+  .read-aloud-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    flex-wrap: wrap;
+  }
+
+  .speed-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .speed-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 5px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--ink);
+    cursor: pointer;
+    outline: none;
+  }
+
+  .progress-bar-wrap {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    min-width: 60px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: #5b9bd5;
+    border-radius: 2px;
+    transition: width 0.3s linear;
+  }
+
+  .progress-bar-fill.active {
+    background: var(--accent-dyslexia);
+  }
+
+  @keyframes soundwave {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(2); }
+  }
+
+  .wave-icon {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 14px;
+  }
+
+  .wave-icon span {
+    display: block;
+    width: 2px;
+    background: currentColor;
+    border-radius: 1px;
+    transform-origin: bottom;
+  }
+
+  .wave-icon span:nth-child(1) { height: 4px; }
+  .wave-icon span:nth-child(2) { height: 8px; }
+  .wave-icon span:nth-child(3) { height: 12px; }
+  .wave-icon span:nth-child(4) { height: 6px; }
+  .wave-icon span:nth-child(5) { height: 10px; }
+
+  .btn-read.speaking .wave-icon span {
+    animation: soundwave 0.8s ease-in-out infinite;
+  }
+
+  .btn-read.speaking .wave-icon span:nth-child(1) { animation-delay: 0s; }
+  .btn-read.speaking .wave-icon span:nth-child(2) { animation-delay: 0.1s; }
+  .btn-read.speaking .wave-icon span:nth-child(3) { animation-delay: 0.2s; }
+  .btn-read.speaking .wave-icon span:nth-child(4) { animation-delay: 0.15s; }
+  .btn-read.speaking .wave-icon span:nth-child(5) { animation-delay: 0.05s; }
+
+  .read-source-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .read-source-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 5px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--ink);
+    cursor: pointer;
+    outline: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo">Accessi<span>Text</span></div>
+    <div class="tagline">Typography accessibility converter</div>
+  </header>
+
+  <div class="panel">
+    <div class="panel-label">
+      <span class="dot"></span>
+      Input Text
+    </div>
+    <textarea id="input-text" placeholder="Paste or type your text here..."></textarea>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-dyslexia" onclick="convertDyslexia()">
+      <span class="btn-title">Dyslexia Mode</span>
+      <span>OpenDyslexic font · wider spacing</span>
+    </button>
+    <button class="btn btn-contrast" onclick="convertContrast()">
+      <span class="btn-title">High Contrast</span>
+      <span>Black bg · yellow text · bold</span>
+    </button>
+  </div>
+
+  <div class="slider-row">
+    <span class="slider-label">Font Size <span id="size-display">16px</span></span>
+    <span class="size-markers"><span class="sz-small">A</span></span>
+    <input type="range" id="font-slider" min="10" max="32" value="16" oninput="updateFontSize(this.value)">
+    <span class="size-markers"><span class="sz-large">A</span></span>
+  </div>
+
+
+  <div class="read-aloud-row">
+    <button class="btn-read" id="read-btn" onclick="toggleReadAloud()">
+      <div class="wave-icon">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <span id="read-btn-label">Read Aloud</span>
+    </button>
+    <button class="btn-stop" onclick="stopReading()" id="stop-btn" style="display:none">&#9632; Stop</button>
+    <div class="read-aloud-controls">
+      <span class="speed-label">Speed:</span>
+      <select class="speed-select" id="speed-select">
+        <option value="0.7">0.7×</option>
+        <option value="0.85">0.85×</option>
+        <option value="1" selected>1×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+      </select>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider">Output</div>
+
+  <div class="panel output-panel" id="output-panel">
+    <div class="panel-label">
+      <span class="dot" id="output-dot"></span>
+      <span id="output-label">Converted Text</span>
+    </div>
+    <div class="mode-badge" id="mode-badge"></div>
+    <textarea id="output-area" readonly placeholder="Your converted text will appear here..."></textarea>
+    <button class="copy-btn" onclick="copyOutput()">Copy</button>
+  </div>
+</div>
+
+<script>
+  let currentMode = null;
+  let currentFontSize = 16;
+
+  function updateFontSize(value) {
+    currentFontSize = parseInt(value);
+    document.getElementById('size-display').textContent = value + 'px';
+    const output = document.getElementById('output-area');
+    output.style.fontSize = value + 'px';
+  }
+
+  function convertDyslexia() {
+    const text = document.getElementById('input-text').value;
+    if (!text.trim()) {
+      flashEmpty();
+      return;
+    }
+
+    const output = document.getElementById('output-area');
+    const badge = document.getElementById('mode-badge');
+    const panel = document.getElementById('output-panel');
+    const dot = document.getElementById('output-dot');
+
+    output.value = text;
+    output.className = 'dyslexia-mode animate-in';
+    
+    badge.textContent = 'Dyslexia Mode';
+    badge.className = 'mode-badge dyslexia visible';
+    
+    panel.className = 'panel output-panel';
+    dot.style.background = '#e8602c';
+
+    currentMode = 'dyslexia';
+
+    // Re-trigger animation
+    output.classList.remove('animate-in');
+    void output.offsetWidth;
+    output.classList.add('animate-in');
+    output.style.fontSize = currentFontSize + 'px';
+  }
+
+  function convertContrast() {
+    const text = document.getElementById('input-text').value;
+    if (!text.trim()) {
+      flashEmpty();
+      return;
+    }
+
+    const output = document.getElementById('output-area');
+    const badge = document.getElementById('mode-badge');
+    const panel = document.getElementById('output-panel');
+    const dot = document.getElementById('output-dot');
+
+    output.value = text;
+    output.className = 'high-contrast-mode animate-in';
+    
+    badge.textContent = 'High Contrast';
+    badge.className = 'mode-badge contrast visible';
+    
+    panel.className = 'panel output-panel high-contrast-output-panel';
+    dot.style.background = '#ffff00';
+
+    currentMode = 'contrast';
+
+    output.classList.remove('animate-in');
+    void output.offsetWidth;
+    output.classList.add('animate-in');
+    output.style.fontSize = currentFontSize + 'px';
+  }
+
+  function flashEmpty() {
+    const input = document.getElementById('input-text');
+    input.style.boxShadow = '0 0 0 2px rgba(232,96,44,0.5)';
+    input.focus();
+    setTimeout(() => input.style.boxShadow = '', 600);
+  }
+
+  async function copyOutput() {
+    const output = document.getElementById('output-area').value;
+    if (!output) return;
+    
+    try {
+      await navigator.clipboard.writeText(output);
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    } catch {}
+  }
+
+  // Read Aloud
+  let ttsState = 'idle';
+
+  function getTextToRead() {
+    // Read whichever textarea has content — output first, then input
+    const out = document.getElementById('output-area').value.trim();
+    const inp = document.getElementById('input-text').value.trim();
+    return out || inp;
+  }
+
+  function toggleReadAloud() {
+    if (ttsState === 'idle') {
+      startReading();
+    } else if (ttsState === 'speaking') {
+      pauseReading();
+    } else if (ttsState === 'paused') {
+      resumeReading();
+    }
+  }
+
+  function startReading() {
+    const text = getTextToRead();
+    if (!text) {
+      document.getElementById('input-text').style.boxShadow = '0 0 0 2px rgba(232,96,44,0.5)';
+      setTimeout(() => document.getElementById('input-text').style.boxShadow = '', 700);
+      return;
+    }
+
+    // Must cancel before creating a new utterance
+    window.speechSynthesis.cancel();
+
+    const rate = parseFloat(document.getElementById('speed-select').value);
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = rate;
+    u.volume = 1;
+    u.pitch = 1;
+
+    u.onend = () => {
+      setTtsState('idle');
+      document.getElementById('progress-bar').style.width = '0%';
+    };
+
+    u.onerror = (e) => {
+      if (e.error !== 'interrupted' && e.error !== 'canceled') {
+        setTtsState('idle');
+      }
+    };
+
+    u.onboundary = (e) => {
+      if (e.name === 'word') {
+        const pct = Math.min(100, (e.charIndex / text.length) * 100);
+        document.getElementById('progress-bar').style.width = pct + '%';
+      }
+    };
+
+    window.speechSynthesis.speak(u);
+    setTtsState('speaking');
+  }
+
+  function pauseReading() {
+    window.speechSynthesis.pause();
+    setTtsState('paused');
+  }
+
+  function resumeReading() {
+    window.speechSynthesis.resume();
+    setTtsState('speaking');
+  }
+
+  function stopReading() {
+    window.speechSynthesis.cancel();
+    setTtsState('idle');
+    document.getElementById('progress-bar').style.width = '0%';
+  }
+
+  function setTtsState(state) {
+    ttsState = state;
+    const btn = document.getElementById('read-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const label = document.getElementById('read-btn-label');
+
+    if (state === 'idle') {
+      label.textContent = 'Read Aloud';
+      btn.classList.remove('speaking');
+      stopBtn.style.display = 'none';
+    } else if (state === 'speaking') {
+      label.textContent = 'Pause';
+      btn.classList.add('speaking');
+      stopBtn.style.display = 'flex';
+    } else if (state === 'paused') {
+      label.textContent = 'Resume';
+      btn.classList.remove('speaking');
+      stopBtn.style.display = 'flex';
+    }
+  }
+</script>
+</body>
+</html>
